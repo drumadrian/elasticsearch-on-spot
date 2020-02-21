@@ -12,7 +12,9 @@ https://cloudcraft.co/view/a4375794-569b-472d-9be3-afd7e069aaa3?key=kaVj0CBAAtiU
 
 ## Deployment Steps
 
+```bash
 cd sam-app/
 sam validate
 sam build
 sam deploy --guided
+```
