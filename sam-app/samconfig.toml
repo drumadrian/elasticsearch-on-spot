@@ -8,3 +8,5 @@ s3_prefix = "sam-app"
 region = "us-west-2"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
+parameter_overrides = "VpcCidrBlock=\"192.168.0.0/16\" SubnetACidrBlock=\"192.168.0.0/20\" SubnetBCidrBlock=\"192.168.16.0/20\" SubnetCCidrBlock=\"192.168.32.0/20\" EgressCidr=\"0.0.0.0/0\""
+

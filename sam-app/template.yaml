@@ -40,6 +40,13 @@ Parameters:
     AllowedPattern: "(?:^$|(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2}))"
     ConstraintDescription: "must be a valid IP CIDR range of the form x.x.x.x/x."
 
+  SubnetCCidrBlock:
+    Type: String
+    Default: 192.168.32.0/20
+    Description: CIDR block for subnet C of the AWS Fargate VPC
+    AllowedPattern: "(?:^$|(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2}))"
+    ConstraintDescription: "must be a valid IP CIDR range of the form x.x.x.x/x."
+
   EgressCidr:
     Type: String
     Default: 0.0.0.0/0
@@ -66,7 +73,9 @@ Resources:
 
 
 
-## Elasticsearch VPC
+# ================================
+#   Elasticsearch VPC
+# ================================
   Vpc:
     Type: AWS::EC2::VPC
     Properties:
@@ -82,6 +91,7 @@ Resources:
   PublicSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
+      MapPublicIpOnLaunch: True
       CidrBlock: !Ref SubnetACidrBlock
       AvailabilityZone:
         !Select
@@ -92,10 +102,22 @@ Resources:
   PublicSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
+      MapPublicIpOnLaunch: True
       CidrBlock: !Ref SubnetBCidrBlock
       AvailabilityZone:
         !Select
-            - 0
+            - 1
+            - !GetAZs
+      VpcId: !Ref Vpc
+
+  PublicSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      MapPublicIpOnLaunch: True
+      CidrBlock: !Ref SubnetCCidrBlock
+      AvailabilityZone:
+        !Select
+            - 2
             - !GetAZs
       VpcId: !Ref Vpc
 
@@ -134,7 +156,551 @@ Resources:
       RouteTableId: !Ref MainRouteTable
       SubnetId: !Ref PublicSubnetB
 
+  RouteTableAssociationC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref MainRouteTable
+      SubnetId: !Ref PublicSubnetC
 
+  ElasticSearchSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Elasticsearch Data Node Security Group
+      VpcId: !Ref Vpc
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: !Ref EgressCidr
+      SecurityGroupIngress:
+        - IpProtocol: '-1'
+          CidrIp: !Ref VpcCidrBlock
+
+  KibanaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription:  Kibana Node Security Group
+      VpcId: !Ref Vpc
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: !Ref EgressCidr
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W36
+            reason: "flagged as not having a Description, property is GroupDescription not Description"
+          - id: W40
+            reason: "IpProtocol set to -1 (any) as ports are not known prior to running tests"
+
+
+# ================================
+#   AMI & EC2 Pipeline and Artifacts  
+# ================================
+
+  BuildBucket:
+    DeletionPolicy: Retain
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: aws:kms
+      Tags:
+        -
+          Key: created by
+          Value: study gurus
+
+
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: codebuild.amazonaws.com
+      Policies:
+        -
+          PolicyName: !Sub ${AWS::StackName}-code-build-policy
+          PolicyDocument:
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - ecr:DescribeImages
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:InitiateLayerUpload
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:ListImages
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetRepositoryPolicy
+                Resource:
+                  - !Sub ${EcrRepository.Arn}
+              -
+                Effect: Allow
+                Action:
+                  - ec2:*
+                  - ecr:GetAuthorizationToken
+                Resource: "*"
+              -
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketVersioning
+                  - s3:GetObjectVersion
+                  - s3:ListBucketVersions
+                  - s3:PutObject
+                Resource:
+                    - !Sub ${BuildBucket.Arn}
+                    - !Sub ${BuildBucket.Arn}/*
+
+
+  CodePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        -
+          PolicyName: !Sub ${AWS::StackName}-code-pipeline-policy
+          PolicyDocument:
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketVersioning
+                  - s3:ListBucketVersions
+                  - s3:PutObject
+                Resource:
+                  - !Sub ${BuildBucket.Arn}
+                  - !Sub ${BuildBucket.Arn}/*
+              -
+                Effect: Allow
+                Action:
+                  - codebuild:StartBuild
+                  - codebuild:BatchGetBuilds
+                Resource:
+                  - !Sub ${BuildBucket.Arn}
+
+# ================================
+#   AMI Pipeline and Artifacts  
+# ================================
+
+
+  AMICodeBuild:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Description: Builds Elasticsearch AMI
+      TimeoutInMinutes: 20
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      EncryptionKey: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_MEDIUM
+        Image: hashicorp/packer
+        EnvironmentVariables:
+          -
+            Name: REPOSITORY
+            Value: !Sub ${EcrRepository}
+          -
+            Name: REPOSITORY_URI
+            Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepository}
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Sub |
+          version: 0.2
+          phases:
+              pre_build:
+                commands:
+                  - echo $REPOSITORY
+                  - echo $REPOSITORY_URI
+                  - $(aws ecr get-login --region ${AWS::Region} --no-include-email)
+              build:
+                commands:
+                  - packer ?
+                  - docker build -t $REPOSITORY:latest .
+                  - ls -al
+                  - docker tag $REPOSITORY:latest $REPOSITORY_URI:latest
+              post_build:
+                commands:
+                  - docker push $REPOSITORY_URI:latest
+
+  AMICodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      RoleArn: !GetAtt CodePipelineRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref BuildBucket
+      Stages:
+        -
+          Name: Source
+          Actions:
+            -
+              Name: Source
+              ActionTypeId:
+                Category: Source
+                Provider: S3
+                Owner: AWS
+                Version: '1'
+              OutputArtifacts:
+                - Name: SourceOutput
+              Configuration:
+                S3Bucket: !Ref BuildBucket
+                S3ObjectKey: ami.zip
+        -
+          Name: Build
+          Actions:
+            -
+              Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                ProjectName:
+                  !Ref AMICodeBuild
+
+
+
+# ================================
+#   ECR Pipeline and Artifacts  
+# ================================
+
+  ContainerCodeBuild:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Description: Builds S3 load testing container
+      TimeoutInMinutes: 20
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      EncryptionKey: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_MEDIUM
+        Image: aws/codebuild/docker:18.09.0
+        EnvironmentVariables:
+          -
+            Name: REPOSITORY
+            Value: !Sub ${EcrRepository}
+          -
+            Name: REPOSITORY_URI
+            Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepository}
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Sub |
+          version: 0.2
+          phases:
+              pre_build:
+                commands:
+                  - echo $REPOSITORY
+                  - echo $REPOSITORY_URI
+                  - $(aws ecr get-login --region ${AWS::Region} --no-include-email)
+              build:
+                commands:
+                  - cd container
+                  - docker build -t $REPOSITORY:latest .
+                  - ls -al
+                  - docker tag $REPOSITORY:latest $REPOSITORY_URI:latest
+              post_build:
+                commands:
+                  - docker push $REPOSITORY_URI:latest
+
+  ContainerCodePipeline:
+    #wait for the container
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      RoleArn: !GetAtt CodePipelineRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref BuildBucket
+      Stages:
+        -
+          Name: Source
+          Actions:
+            -
+              Name: Source
+              ActionTypeId:
+                Category: Source
+                Provider: S3
+                Owner: AWS
+                Version: '1'
+              OutputArtifacts:
+                - Name: SourceOutput
+              Configuration:
+                S3Bucket: !Ref BuildBucket
+                S3ObjectKey: container.zip
+        -
+          Name: Build
+          Actions:
+            -
+              Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                ProjectName:
+                  !Ref ContainerCodeBuild
+
+
+  DataDogContainerCodeBuild:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Description: Builds S3 load testing container
+      TimeoutInMinutes: 20
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      EncryptionKey: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_MEDIUM
+        Image: aws/codebuild/docker:18.09.0
+        EnvironmentVariables:
+          -
+            Name: REPOSITORY
+            Value: !Sub ${DataDogEcrRepository}
+          -
+            Name: REPOSITORY_URI
+            Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${DataDogEcrRepository}
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Sub |
+          version: 0.2
+          phases:
+              pre_build:
+                commands:
+                  - echo $REPOSITORY
+                  - echo $REPOSITORY_URI
+                  - $(aws ecr get-login --region ${AWS::Region} --no-include-email)
+              build:
+                commands:
+                  - cd container
+                  - docker build -t $REPOSITORY:latest .
+                  - ls -al
+                  - docker tag $REPOSITORY:latest $REPOSITORY_URI:latest
+              post_build:
+                commands:
+                  - docker push $REPOSITORY_URI:latest
+
+  DataDogContainerCodePipeline:
+    #wait for the container
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      RoleArn: !GetAtt CodePipelineRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref BuildBucket
+      Stages:
+        -
+          Name: Source
+          Actions:
+            -
+              Name: Source
+              ActionTypeId:
+                Category: Source
+                Provider: S3
+                Owner: AWS
+                Version: '1'
+              OutputArtifacts:
+                - Name: SourceOutput
+              Configuration:
+                S3Bucket: !Ref BuildBucket
+                S3ObjectKey: datadogcontainer.zip
+        -
+          Name: Build
+          Actions:
+            -
+              Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                ProjectName:
+                  !Ref DataDogContainerCodeBuild
+
+
+
+
+# ================================
+#   Monitoring Elasticsearch ECS Fargate Resources  
+# ================================
+
+  EcrRepository:
+    # stack delte will fail as the repo is not empty.
+    DeletionPolicy: Retain
+    Type: AWS::ECR::Repository
+
+  EcsCluster:
+      Type: AWS::ECS::Cluster
+      Properties:
+        ClusterName: !Sub ${AWS::StackName}-Elasticsearch
+        Tags:
+          -
+            Key: Project
+            Value: S3 Put LoadTest
+
+  EcsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: LoadTest Tasks Security Group
+      VpcId: !Ref Vpc
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: !Ref EgressCidr
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W36
+            reason: "flagged as not having a Description, property is GroupDescription not Description"
+          - id: W40
+            reason: "IpProtocol set to -1 (any) as ports are not known prior to running tests"
+
+  EcsTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Cpu: '512'
+      ExecutionRoleArn: !GetAtt EcsTaskExecutionRole.Arn
+      Memory: '2048'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      TaskRoleArn: !GetAtt EcsTaskExecutionRole.Arn
+      ContainerDefinitions:
+        -
+          Essential: true
+          Name: !Sub ${AWS::StackName}-load-tester
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepository}:latest
+          Memory: 2048
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref EcsCloudWatchLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: "load-testing"
+
+  EcsCloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 365
+
+  EcsTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: "sts:AssumeRole"
+            Principal:
+              Service: "ecs-tasks.amazonaws.com"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+
+
+# ================================
+#   DataDog ECS Fargate Resources 
+# ================================
+
+  DataDogEcrRepository:
+    # stack delete will fail as the repo is not empty.
+    DeletionPolicy: Retain
+    Type: AWS::ECR::Repository
+
+  DataDogEcsCluster:
+      Type: AWS::ECS::Cluster
+      Properties:
+        ClusterName: !Sub ${AWS::StackName}-DataDog
+        Tags:
+          -
+            Key: Project
+            Value: DataDog Elasticsearch Monitoring cluster
+
+  DataDogEcsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: LoadTest Tasks Security Group
+      VpcId: !Ref Vpc
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: !Ref EgressCidr
+
+  DataDogEcsTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Cpu: '512'
+      ExecutionRoleArn: !GetAtt DataDogEcsTaskExecutionRole.Arn
+      Memory: '2048'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      TaskRoleArn: !GetAtt DataDogEcsTaskExecutionRole.Arn
+      ContainerDefinitions:
+        -
+          Essential: true
+          Name: !Sub ${AWS::StackName}-DataDog
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${DataDogEcrRepository}:latest
+          Memory: 2048
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref DataDogEcsCloudWatchLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: "datadog"
+
+  DataDogEcsCloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 365
+
+  DataDogEcsTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: "sts:AssumeRole"
+            Principal:
+              Service: "ecs-tasks.amazonaws.com"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 
 
 
