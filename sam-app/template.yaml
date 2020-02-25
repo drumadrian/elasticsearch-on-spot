@@ -238,6 +238,7 @@ Resources:
                   - ecr:ListImages
                   - ecr:BatchCheckLayerAvailability
                   - ecr:GetRepositoryPolicy
+                  - logs:CreateLogStream
                 Resource:
                   - !Sub ${EcrRepository.Arn}
               -
@@ -305,7 +306,7 @@ Resources:
   AMICodeBuild:
     Type: AWS::CodeBuild::Project
     Properties:
-      Description: Builds Elasticsearch AMI
+      Description: Builds Elasticsearch AMI (-Sid)
       TimeoutInMinutes: 20
       ServiceRole: !GetAtt CodeBuildRole.Arn
       EncryptionKey: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3
@@ -335,9 +336,7 @@ Resources:
               build:
                 commands:
                   - packer ?
-                  - docker build -t $REPOSITORY:latest .
-                  - ls -al
-                  - docker tag $REPOSITORY:latest $REPOSITORY_URI:latest
+                  - packer build packer-template.json
               post_build:
                 commands:
                   - docker push $REPOSITORY_URI:latest
