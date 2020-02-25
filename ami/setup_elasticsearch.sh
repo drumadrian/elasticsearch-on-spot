@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# To be populated after confirming the steps by building the AMI.
 
 # Install AMI tools: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/set-up-ami-tools.html
 sudo yum install -y ruby
@@ -32,3 +31,21 @@ type=rpm-md
 EOF
 sudo mv elasticsearch.repo /etc/yum.repos.d/
 sudo yum install -y --enablerepo=elasticsearch elasticsearch
+
+# Install Kibana
+cat <<EOF >> kibana.repo
+[kibana-7.x]
+name=Kibana repository for 7.x packages
+baseurl=https://artifacts.elastic.co/packages/7.x/yum
+gpgcheck=1
+gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+enabled=1
+autorefresh=1
+type=rpm-md
+EOF
+sudo mv kibana.repo /etc/yum.repos.d/
+sudo yum install -y kibana
+
+# Install Metricbeat
+curl -L -O https://artifacts.elastic.co/downloads/beats/metricbeat/metricbeat-7.6.0-x86_64.rpm
+sudo rpm -vi metricbeat-7.6.0-x86_64.rpm
