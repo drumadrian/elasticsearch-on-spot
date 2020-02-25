@@ -245,6 +245,7 @@ Resources:
                 Effect: Allow
                 Action:
                   - ec2:*
+                  - logs:*
                   - ecr:GetAuthorizationToken
                 Resource: "*"
               -
