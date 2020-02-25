@@ -9,9 +9,15 @@ rpm -K ec2-ami-tools.noarch.rpm
 rpm -Kv ec2-ami-tools.noarch.rpm
 sudo yum install -y ec2-ami-tools.noarch.rpm
 export RUBYLIB=$RUBYLIB:/usr/lib/ruby/site_ruby:/usr/lib64/ruby/site_ruby
+echo "The following line should display the installed version of AMI tools"
 ec2-ami-tools-version
-ec2-bundle-vol
 
+# Set the following envs so the sudo user has access to the AMI tools
+sudo touch /etc/profile.d/ami-tools-env.sh
+sudo bash -c 'echo "export RUBYLIB=$RUBYLIB:/usr/lib/ruby/site_ruby:/usr/lib64/ruby/site_ruby" >> /etc/profile.d/ami-tools-env.sh'
+sudo bash -c 'echo "export PATH=/usr/local/bin:$PATH:" >> /etc/profile.d/ami-tools-env.sh'
+
+# Install ElasticSearch
 sudo rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
 
 cat <<EOF >> elasticsearch.repo
