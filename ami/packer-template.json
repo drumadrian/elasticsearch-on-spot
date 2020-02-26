@@ -1,16 +1,9 @@
 {
-    "variables": {
-      "account_id": "101845606311"
-    },
     "builders": [{
-      "type": "amazon-instance",
-      "account_id": "{{user `account_id`}}",
+      "type": "amazon-ebs",
       "instance_type": "t2.small",
       "ssh_username": "ec2-user",
       "source_ami": "ami-0e8c04af2729ff1bb",
-      "s3_bucket": "sam-app-sid-buildbucket-bqer8i6q9hcw",
-      "x509_cert_path": "certificate.pem",
-      "x509_key_path": "private-key.pem",
       "ami_name": "packer-elasticsearch {{timestamp}}"
     }],
     "provisioners": [
