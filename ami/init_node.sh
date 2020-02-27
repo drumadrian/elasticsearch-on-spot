@@ -40,3 +40,7 @@ fi
 
 # Start ElasticSearch Service
 sudo systemctl start elasticsearch.service
+
+if [[ $nodeRole == *"master"* ]]; then
+  sudo systemctl start kibana.service
+fi
