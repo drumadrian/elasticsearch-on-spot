@@ -1,7 +1,7 @@
 {
   "builders": [{
     "type": "amazon-ebs",
-    "instance_type": "t2.large",
+    "instance_type": "i3en.large",
     "ssh_username": "ec2-user",
     "source_ami": "ami-0e8c04af2729ff1bb",
     "associate_public_ip_address": true,
