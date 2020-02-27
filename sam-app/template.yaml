@@ -603,6 +603,8 @@ Resources:
                   - $(aws ecr get-login --region ${AWS::Region} --no-include-email)
               build:
                 commands:
+                  - pwd
+                  - ls -al
                   - cd fargateelasticsearch
                   - docker build -t $REPOSITORY:latest .
                   - ls -al

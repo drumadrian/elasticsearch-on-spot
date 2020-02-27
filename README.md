@@ -42,7 +42,7 @@ rm fargateelasticsearch.zip
 zip -r fargateelasticsearch.zip ./fargateelasticsearch 
 
 aws s3 cp ami.zip s3://sam-app-buildbucket-q6q9gvg7dirr/ami.zip
-aws s3 cp ami.zip s3://sam-app-buildbucket-q6q9gvg7dirr/fargateelasticsearch.zip
+aws s3 cp fargateelasticsearch.zip s3://sam-app-buildbucket-q6q9gvg7dirr/fargateelasticsearch.zip
 
 
 ```
