@@ -18,3 +18,31 @@ sam validate
 sam build
 sam deploy --guided
 ```
+
+
+## AMI and Container Build Steps
+
+```bash
+cd elasticsearch-on-spot
+rm ami.zip
+zip -r ami.zip ./ami 
+aws s3 cp ami.zip s3://<bucketname>/ami.zip
+
+rm fargateelasticsearch.zip
+zip -r fargateelasticsearch.zip ./fargateelasticsearch 
+aws s3 cp fargateelasticsearch.zip s3://<bucketname>/fargateelasticsearch.zip
+
+
+   Example for a bucket with name: sam-app-buildbucket-uhg9qpo5o8xt
+cd elasticsearch-on-spot
+rm ami.zip
+zip -r ami.zip ./ami 
+
+rm fargateelasticsearch.zip
+zip -r fargateelasticsearch.zip ./fargateelasticsearch 
+
+aws s3 cp ami.zip s3://sam-app-buildbucket-uhg9qpo5o8xt/ami.zip
+aws s3 cp ami.zip s3://sam-app-buildbucket-uhg9qpo5o8xt/fargateelasticsearch.zip
+
+
+```
