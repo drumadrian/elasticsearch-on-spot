@@ -66,7 +66,7 @@ Parameters:
 
   HostedZone:
     Type: String
-    Default: "elasticsearch.com"
+    Default: "elasticsearch"
     Description: The DNS name of the Amazon Route 53 hosted zone
     AllowedPattern: '(?!-)[a-zA-Z0-9-.]{1,63}(?<!-)'
     ConstraintDescription: must be a valid DNS zone name.
@@ -236,6 +236,7 @@ Resources:
           Value: 'Elasticsearch on Spot project'
 
   FirstMasterDNSDNSRecord:
+    DependsOn: ElasticsearchDNSzone
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneName: !Join 
@@ -255,6 +256,7 @@ Resources:
         - !Ref InitialResourceRecord
 
   ElasticsearchclusterNameDNSRecord:
+    DependsOn: ElasticsearchDNSzone
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneName: !Join 
@@ -336,7 +338,7 @@ Resources:
 #   AMI & EC2 Pipeline and Artifacts  
 # ================================
   BuildBucket:
-    DeletionPolicy: Retain
+    # DeletionPolicy: Retain
     Type: AWS::S3::Bucket
     Properties:
       VersioningConfiguration:
@@ -615,7 +617,7 @@ Resources:
 # ================================
   EcrRepository:
     # stack delte will fail as the repo is not empty, so we retain the resource
-    DeletionPolicy: Retain
+    # DeletionPolicy: Retain
     Type: AWS::ECR::Repository
 
   EcsCluster:

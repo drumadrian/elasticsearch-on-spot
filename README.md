@@ -33,7 +33,7 @@ zip -r fargateelasticsearch.zip ./fargateelasticsearch
 aws s3 cp fargateelasticsearch.zip s3://<bucketname>/fargateelasticsearch.zip
 
 
-   Example for a bucket with name: sam-app-buildbucket-uhg9qpo5o8xt
+   Example for a bucket with name: sam-app-buildbucket-q6q9gvg7dirr
 cd elasticsearch-on-spot
 rm ami.zip
 zip -r ami.zip ./ami 
@@ -41,8 +41,8 @@ zip -r ami.zip ./ami
 rm fargateelasticsearch.zip
 zip -r fargateelasticsearch.zip ./fargateelasticsearch 
 
-aws s3 cp ami.zip s3://sam-app-buildbucket-uhg9qpo5o8xt/ami.zip
-aws s3 cp ami.zip s3://sam-app-buildbucket-uhg9qpo5o8xt/fargateelasticsearch.zip
+aws s3 cp ami.zip s3://sam-app-buildbucket-q6q9gvg7dirr/ami.zip
+aws s3 cp ami.zip s3://sam-app-buildbucket-q6q9gvg7dirr/fargateelasticsearch.zip
 
 
 ```
