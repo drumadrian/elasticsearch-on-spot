@@ -1,15 +1,40 @@
 {
-    "builders": [{
-      "type": "amazon-ebs",
-      "instance_type": "t2.small",
-      "ssh_username": "ec2-user",
-      "source_ami": "ami-0e8c04af2729ff1bb",
-      "ami_name": "packer-elasticsearch {{timestamp}}"
-    }],
-    "provisioners": [
-        {
-          "type": "shell",
-          "script": "setup_elasticsearch.sh"
-        }
-    ]
-  }
+  "builders": [{
+    "type": "amazon-ebs",
+    "instance_type": "t2.medium",
+    "ssh_username": "ec2-user",
+    "source_ami": "ami-0e8c04af2729ff1bb",
+    "associate_public_ip_address": true,
+    "ami_name": "packer-elasticsearch {{timestamp}}",
+    "ssh_timeout" : "10m"
+  }],
+  "provisioners": [
+    {
+      "type": "shell",
+      "script": "setup_elasticsearch.sh"
+    },
+    {
+      "type": "file",
+      "source": "elasticsearch.yml",
+      "destination": "/home/ec2-user/elasticsearch.yml"
+    },
+    {
+      "type": "file",
+      "source": "init_node.sh",
+      "destination": "/home/ec2-user/init_node.sh"
+    },
+    {
+      "type": "file",
+      "source": "init_node.service",
+      "destination": "/home/ec2-user/init_node.service"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sudo mv /home/ec2-user/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml",
+        "sudo mv /home/ec2-user/init_node.sh /usr/bin/init_node.sh && chmod +x /usr/bin/init_node.sh",
+        "sudo mv /home/ec2-user/init_node.service /etc/systemd/system/init_node.service && sudo chmod 644 /etc/systemd/system/init_node.service"
+      ]
+    }
+  ]
+}

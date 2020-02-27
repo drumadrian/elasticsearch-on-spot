@@ -1,0 +1,9 @@
+[Unit]
+Description=Initializes an ElasticSearch node
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /usr/bin/init_node.sh
+
+[Install]
+WantedBy=multi-user.target
