@@ -19,12 +19,13 @@ ls -al /
 sudo chown elasticsearch:elasticsearch /nvmedrivefolder
 
 # DNS record is set manually and then the first node is restarted.
-masterIP=`getent hosts firstmaster.sid.elasticsearch | awk '{ print $1 }'`
+masterIP=`getent hosts firstmaster.elasticsearch | awk '{ print $1 }'`
 if [ -z $masterIP ]
 then
   echo "DNS record isn't set for the master node. No ElasticSearch cluster can be formed."
   exit 1
 else
+  echo " " | sudo tee -a /etc/elasticsearch.elasticsearch.yml # ignore the commented out line
   echo "cluster.initial_master_nodes: [\"`getent hosts firstmaster.sid.elasticsearch | awk '{ print $1 }'`\"]" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
 fi
 
@@ -40,6 +41,10 @@ fi
 
 # Start ElasticSearch Service
 sudo systemctl start elasticsearch.service
+
+# Update Kibana config to point to ElasticSearch
+echo "server.host: `curl http://169.254.169.254/latest/meta-data/public-hostname`" | sudo tee -a /etc/kibana/kibana.yml
+echo "elasticsearch.hosts: [\"http://`getent hosts firstmaster.sid.elasticsearch | awk '{ print $1 }'`:9200\"]" | sudo tee -a /etc/kibana/kibana.yml
 
 if [[ $nodeRole == *"master"* ]]; then
   sudo systemctl start kibana.service
