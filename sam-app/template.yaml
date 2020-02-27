@@ -438,7 +438,8 @@ Resources:
                   - codebuild:StartBuild
                   - codebuild:BatchGetBuilds
                 Resource:
-                  - !Sub ${BuildBucket.Arn}
+                  - !Sub ${AMICodeBuild.Arn}
+                  - !Sub ${ContainerCodeBuild.Arn}
 
 # ================================
 #   AMI Pipeline and Artifacts  
@@ -514,15 +515,17 @@ Resources:
                 commands:
                   - echo $REPOSITORY
                   - echo $REPOSITORY_URI
+                  - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                  - unzip awscliv2.zip
+                  - sudo ./aws/install
                   - $(aws ecr get-login --region ${AWS::Region} --no-include-email)
               build:
                 commands:
                   - cd ami
-                  - packer ?
                   - packer build packer-template.json
               post_build:
                 commands:
-                  - docker push $REPOSITORY_URI:latest
+                  - ls -al
 
 
 
