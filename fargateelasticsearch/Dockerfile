@@ -1,3 +1,3 @@
-FROM elasticsearch
+FROM docker.elastic.co/elasticsearch/elasticsearch:7.6.0
 # https://hub.docker.com/_/elasticsearch
-ENTRYPOINT ["idontknow","/folder/file"]
+ENTRYPOINT ["python","-V"]

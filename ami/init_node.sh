@@ -24,14 +24,14 @@ done
 
 # We add the master node's IP to the config file
 echo " " | sudo tee -a /etc/elasticsearch.elasticsearch.yml # ignore the commented out line
-echo "cluster.initial_master_nodes: [\"`getent hosts firstmaster.sid.elasticsearch | awk '{ print $1 }'`\"]" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
+echo "cluster.initial_master_nodes: [\"$masterIP\"]" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
 
 nodeRole=`curl http://169.254.169.254/latest/meta-data/security-groups`
 
-if [[ $nodeRole == *"master"* ]]; then
+if [[ $nodeRole == *"master"* ] || [ $nodeRole == *"Master"* ]]; then
   echo "node.master: true" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
   echo "node.data: false" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
-elif [[ $nodeRole == *"data"* ]]; then
+elif [[ $nodeRole == *"data"* ] || [ $nodeRole == *"Data"* ]]; then
   echo "node.master: false" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
   echo "node.data: true" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
 fi
@@ -41,8 +41,9 @@ sudo systemctl start elasticsearch.service
 
 # Update Kibana config to point to ElasticSearch
 echo "server.host: `curl http://169.254.169.254/latest/meta-data/public-hostname`" | sudo tee -a /etc/kibana/kibana.yml
-echo "elasticsearch.hosts: [\"http://`getent hosts firstmaster.sid.elasticsearch | awk '{ print $1 }'`:9200\"]" | sudo tee -a /etc/kibana/kibana.yml
+echo "elasticsearch.hosts: [\"http://$masterIP:9200\"]" | sudo tee -a /etc/kibana/kibana.yml
 
-if [[ $nodeRole == *"master"* ]]; then
+# Start Kibana Service
+if [[ $nodeRole == *"master"* ] || [ $nodeRole == *"Master"* ]]; then
   sudo systemctl start kibana.service
 fi
