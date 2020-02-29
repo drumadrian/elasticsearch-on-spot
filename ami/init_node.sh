@@ -13,16 +13,18 @@ ls -al /
 # Allow elasticsearch user access to the mount drive
 sudo chown elasticsearch:elasticsearch /nvmedrivefolder
 
-# DNS record is set manually and then the first node is restarted.
+# We wait till the DNS record is available
 masterIP=`getent hosts firstmaster.elasticsearch | awk '{ print $1 }'`
-if [ -z $masterIP ]
-then
-  echo "DNS record isn't set for the master node. No ElasticSearch cluster can be formed."
-  exit 1
-else
-  echo " " | sudo tee -a /etc/elasticsearch.elasticsearch.yml # ignore the commented out line
-  echo "cluster.initial_master_nodes: [\"`getent hosts firstmaster.sid.elasticsearch | awk '{ print $1 }'`\"]" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
-fi
+while [ -z $masterIP ]
+do
+  echo "DNS record isn't set for the master node. No ElasticSearch cluster can be formed. Trying again in a min."
+  masterIP=`getent hosts firstmaster.elasticsearch | awk '{ print $1 }'`
+  sleep 60
+done
+
+# We add the master node's IP to the config file
+echo " " | sudo tee -a /etc/elasticsearch.elasticsearch.yml # ignore the commented out line
+echo "cluster.initial_master_nodes: [\"`getent hosts firstmaster.sid.elasticsearch | awk '{ print $1 }'`\"]" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
 
 nodeRole=`curl http://169.254.169.254/latest/meta-data/security-groups`
 
