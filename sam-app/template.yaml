@@ -335,6 +335,9 @@ Resources:
       Port: 5601
       Protocol: HTTP
       VpcId: !Ref Vpc
+      TargetGroupAttributes:
+      - Key: deregistration_delay.timeout_seconds
+        Value: '0'
 
 
   DataNodeTargetGroup: 
@@ -351,7 +354,89 @@ Resources:
       Port: 9200
       Protocol: HTTP
       VpcId: !Ref Vpc
+      TargetGroupAttributes:
+      - Key: deregistration_delay.timeout_seconds
+        Value: '0'
 
+  # DataNodeLaunchTemplate: 
+  #   Type: AWS::EC2::LaunchTemplate
+  #   Properties: 
+  #     LaunchTemplateData: 
+  #       BlockDeviceMappings: 
+  #         - BlockDeviceMapping
+  #       CapacityReservationSpecification: 
+  #         CapacityReservationSpecification
+  #       CpuOptions: 
+  #         CpuOptions
+  #       CreditSpecification: 
+  #         CreditSpecification
+  #       DisableApiTermination: Boolean
+  #       EbsOptimized: Boolean
+  #       ElasticGpuSpecifications: 
+  #         - ElasticGpuSpecification
+  #       ElasticInferenceAccelerators: 
+  #         - LaunchTemplateElasticInferenceAccelerator
+  #       HibernationOptions: 
+  #         HibernationOptions
+  #       IamInstanceProfile: 
+  #         IamInstanceProfile
+  #       ImageId: String
+  #       InstanceInitiatedShutdownBehavior: String
+  #       InstanceMarketOptions: 
+  #         InstanceMarketOptions
+  #       InstanceType: String
+  #       KernelId: String
+  #       KeyName: String
+  #       # LicenseSpecifications: 
+  #       #   - LicenseSpecification
+  #       # MetadataOptions: 
+  #       #   MetadataOptions
+  #       # Monitoring: 
+  #       #   Monitoring
+  #       # NetworkInterfaces: 
+  #       #   - NetworkInterface
+  #       # Placement: 
+  #       #   Placement
+  #       # RamDiskId: String
+  #       SecurityGroupIds: 
+  #         - !Ref ElasticSearchSecurityGroup
+  #       # SecurityGroups: 
+  #       #   - !Ref ElasticSearchSecurityGroup
+  #       # TagSpecifications: 
+  #       #   - TagSpecification
+  #       UserData: String
+  #     LaunchTemplateName: DataNodeLaunchTemplate
+
+  ElasticsearchNodeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: codebuild.amazonaws.com
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      Policies:
+        -
+          PolicyName: !Sub ${AWS::StackName}-ElasticsearchNode-policy
+          PolicyDocument:
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - logs:*
+                Resource: "*"
+
+  ElasticsearchNodeInstanceProfile: 
+    Type: "AWS::IAM::InstanceProfile"
+    Properties: 
+      Path: "/"
+      Roles: 
+        - 
+          Ref: "ElasticsearchNodeRole"
 
 
 # ================================
@@ -620,7 +705,7 @@ Resources:
                 commands:
                   - echo $REPOSITORY
                   - echo $REPOSITORY_URI
-                  - $(aws ecr get-login --region ${AWS::Region} --no-include-email)
+                  - $(aws ecr get-login --region ${AWS::Region} --no-in ude-email)
               build:
                 commands:
                   - pwd
@@ -712,6 +797,104 @@ Resources:
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
         - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+
+
+
+
+# ========================================================================
+## Resources for LAMBDA TO CLEAN UP S3 BUCKETS 
+# ========================================================================
+  cleanupBucketOnDelete:
+    DependsOn: cleanupBucketOnDeleteFunction
+    Type: Custom::cleanupbucket
+    Properties:
+      ServiceToken: 
+        Fn::GetAtt: 
+          - "cleanupBucketOnDeleteFunction"
+          - "Arn"
+      BucketName: !Sub '${BuildBucket}'
+
+  
+  cleanupBucketOnDeleteFunction:
+    DependsOn: StorageBucket
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      Role: !GetAtt cleanupOnDeleteLambdaRole.Arn
+      CodeUri: cleanupBucketOnDelete/
+      Handler: cleanupBucketOnDelete.lambda_handler
+      Runtime: python3.7
+      Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
+        Variables:
+          s3_bucket_name: !Ref BuildBucket
+      Timeout: 30
+      Description: cleanup Bucket on Delete Lambda function.
+
+# -------------------------------------------------------
+
+  cleanupEcrOnDelete:
+      DependsOn: cleanupEcrOnDeleteFunction
+      Type: Custom::cleanuprepository
+      Properties:
+          ServiceToken: 
+              Fn::GetAtt: 
+                - "cleanupEcrOnDeleteFunction"
+                - "Arn"
+          ECRRepositoryARN: !Sub '${EcrRepository.Arn}'
+
+  cleanupEcrOnDeleteFunction:
+      DependsOn: ContainerBucket
+      Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+      Properties:
+          Role: !GetAtt cleanupOnDeleteLambdaRole.Arn
+          CodeUri: cleanupEcrOnDelete/
+          Handler: cleanupEcrOnDelete.lambda_handler
+          Runtime: python3.7
+          Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
+              Variables:
+                  repository_name: !Ref EcrRepository
+                  registryId: !Ref AWS::AccountId
+          Timeout: 30
+          Description: Delete ECR repo Lambda function.
+
+# -------------------------------------------------------
+
+  cleanupOnDeleteLambdaRole:
+      Type: AWS::IAM::Role
+      Properties:
+          AssumeRolePolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                  - Action: ['sts:AssumeRole']
+                    Effect: Allow
+                    Principal:
+                      Service: [lambda.amazonaws.com]
+
+  cleanupOnDeleteLambdaRolePolicy: 
+      Type: "AWS::IAM::Policy"
+      Properties: 
+          PolicyName: !Sub "${AWS::StackName}-cleanupOnDeleteLambdaRolePolicy"
+          PolicyDocument: 
+              Version: "2012-10-17"
+              Statement: 
+                  - Effect: "Allow"
+                    Action: 
+                          - "s3:*"
+                          - "logs:*"
+                          - "ecr:*"
+                    Resource: "*"
+                  - Effect: "Deny"
+                    Action: 
+                          - "s3:DeleteBucket"
+                          - "ecr:delete-repository"
+                    Resource: "*"
+          Roles: 
+              - Ref: "cleanupOnDeleteLambdaRole"
+
+
+
+
+
+
 
 
 
