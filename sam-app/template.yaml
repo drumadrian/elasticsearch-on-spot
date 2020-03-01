@@ -191,9 +191,11 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: '-1'
           CidrIp: !Ref EgressCidr
+          Description: 'Allow All Outbound'
       SecurityGroupIngress:
         - IpProtocol: '-1'
           CidrIp: !Ref VpcCidrBlock
+          Description: 'Allow All from VPC CIDR'
 
   KibanaAndMasterSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -203,6 +205,11 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: '-1'
           CidrIp: !Ref EgressCidr
+          Description: 'Allow All Outbound'
+      SecurityGroupIngress:
+        - IpProtocol: '-1'
+          CidrIp: !Ref VpcCidrBlock
+          Description: 'Allow All from VPC CIDR'
 
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -212,9 +219,22 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: '-1'
           CidrIp: !Ref EgressCidr
+          Description: 'Allow All Outbound'
       SecurityGroupIngress:
         - IpProtocol: '-1'
           CidrIp: !Ref VpcCidrBlock
+          Description: 'Allow All from VPC CIDR'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+          Description: 'Allow All http from Anywhere'
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 443
+          ToPort: 443
+          Description: 'Allow All https from Anywhere'
 
 
 # ================================
@@ -633,18 +653,23 @@ Resources:
   EcsSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: LoadTest Tasks Security Group
+      GroupDescription: Single Instance Elasticsearch Task Security Group
       VpcId: !Ref Vpc
       SecurityGroupEgress:
         - IpProtocol: '-1'
           CidrIp: !Ref EgressCidr
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W36
-            reason: "flagged as not having a Description, property is GroupDescription not Description"
-          - id: W40
-            reason: "IpProtocol set to -1 (any) as ports are not known prior to running tests"
+          Description: 'Allow All Outbound'
+      SecurityGroupIngress:
+        - IpProtocol: '-1'
+          CidrIp: !Ref VpcCidrBlock
+          Description: 'Allow All from VPC CIDR'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+          Description: 'Allow All on port 80 from Anywhere'
+
 
   EcsTaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -703,3 +728,6 @@ Outputs:
   HelloWorldFunctionIamRole:
     Description: "Implicit IAM Role created for Hello World function"
     Value: !GetAtt HelloWorldFunctionRole.Arn
+
+
+
