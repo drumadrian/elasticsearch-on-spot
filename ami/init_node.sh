@@ -28,10 +28,10 @@ echo "cluster.initial_master_nodes: [\"$masterIP\"]" | sudo tee -a /etc/elastics
 
 nodeRole=`curl http://169.254.169.254/latest/meta-data/security-groups`
 
-if [[ $nodeRole == *"master"* ] || [ $nodeRole == *"Master"* ]]; then
+if [ $nodeRole == *"master"* ] || [ $nodeRole == *"Master"* ]; then
   echo "node.master: true" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
   echo "node.data: false" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
-elif [[ $nodeRole == *"data"* ] || [ $nodeRole == *"Data"* ]]; then
+elif [ $nodeRole == *"data"* ] || [ $nodeRole == *"Data"* ]; then
   echo "node.master: false" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
   echo "node.data: true" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
 fi
@@ -44,6 +44,6 @@ echo "server.host: `curl http://169.254.169.254/latest/meta-data/public-hostname
 echo "elasticsearch.hosts: [\"http://$masterIP:9200\"]" | sudo tee -a /etc/kibana/kibana.yml
 
 # Start Kibana Service
-if [[ $nodeRole == *"master"* ] || [ $nodeRole == *"Master"* ]]; then
+if [ $nodeRole == *"master"* ] || [ $nodeRole == *"Master"* ]; then
   sudo systemctl start kibana.service
 fi

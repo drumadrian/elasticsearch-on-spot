@@ -257,7 +257,7 @@ Resources:
           - !Ref HostedZone
           - .
       Type: A
-      TTL: '900'
+      TTL: '30'
       ResourceRecords:
         - !Ref InitialResourceRecord
 
@@ -277,7 +277,7 @@ Resources:
           - !Ref HostedZone
           - .
       Type: TXT
-      TTL: '900'
+      TTL: '30'
       ResourceRecords:
         - !Sub "\"${ElasticsearchClusterName}\""
 
