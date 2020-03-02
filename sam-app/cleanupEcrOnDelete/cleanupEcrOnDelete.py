@@ -6,14 +6,16 @@ import os
 def empty_ecr_repository(repository_name, registryId):
     print ("trying to empty the repository {0}".format(repository_name))
     ecr_client = boto3.client('ecr')
-    list_images_response = client.list_images(registryId=registryId, repositoryName=repository_name)
-    batch_delete_image_response = client.batch_delete_image(registryId=registryId, repositoryName=repository_name, imageIds=list_images_response['imageIds'])
-
-    #UNCOMMENT THE LINE BELOW TO MAKE LAMBDA DELETE THE REPOSITORY....AND UPDATE IAM POLICY
-    # THIS WILL CAUSE AN FAILURE SINCE CLOUDFORMATION ALSO TRIES TO DELETE THE REPOSITORY
-    # response = ecr_client.delete_repository(registryId=registryId, repositoryName=repository_name, force=True)
-    # print ("Successfully deleted the repository {0}".format(repository_name))
-    print ("Successfully emptied the repository {0}".format(repository_name))
+    list_images_response = ecr_client.list_images(registryId=registryId, repositoryName=repository_name)
+    if len(list_images_response['imageIds']) == 0:
+        print ("ecr_client.list_images() returned 0 images in {0}".format(repository_name))
+    else:
+        batch_delete_image_response = ecr_client.batch_delete_image(registryId=registryId, repositoryName=repository_name, imageIds=list_images_response['imageIds'])
+        #UNCOMMENT THE LINE BELOW TO MAKE LAMBDA DELETE THE REPOSITORY....AND UPDATE IAM POLICY
+        # THIS WILL CAUSE AN FAILURE SINCE CLOUDFORMATION ALSO TRIES TO DELETE THE REPOSITORY
+        # response = ecr_client.delete_repository(registryId=registryId, repositoryName=repository_name, force=True)
+        # print ("Successfully deleted the repository {0}".format(repository_name))
+        print ("Successfully emptied the repository {0} of {1} images".format(repository_name, len(list_images_response['imageIds']) ))
 
 
 def sendResponseCfn(event, context, responseStatus):
