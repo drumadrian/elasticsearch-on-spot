@@ -2,7 +2,7 @@ version = 0.1
 [default]
 [default.deploy]
 [default.deploy.parameters]
-stack_name = "sam-app"
+stack_name = "elasticsearch-on-spot"
 s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1e74394h1ysht"
 s3_prefix = "sam-app"
 region = "us-west-2"
