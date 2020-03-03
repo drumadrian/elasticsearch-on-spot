@@ -23,6 +23,7 @@ do
 done
 
 # We add the master node's IP to the config file
+sudo cp /etc/elasticsearch/elasticsearch.yml.bak /etc/elasticsearch/elasticsearch.yml
 echo -e "\n" | sudo tee -a /etc/elasticsearch.elasticsearch.yml # ignore the commented out line
 echo "cluster.initial_master_nodes: [\"$masterIP\"]" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
 
@@ -40,6 +41,7 @@ fi
 sudo systemctl start elasticsearch.service
 
 # Update Kibana config to point to ElasticSearch
+sudo cp /etc/kibana/kibana.yml.bak /etc/kibana/kibana.yml
 echo "server.host: `curl http://169.254.169.254/latest/meta-data/public-hostname`" | sudo tee -a /etc/kibana/kibana.yml
 echo "elasticsearch.hosts: [\"http://$masterIP:9200\"]" | sudo tee -a /etc/kibana/kibana.yml
 
