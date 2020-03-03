@@ -15,7 +15,7 @@ sudo chown elasticsearch:elasticsearch /nvmedrivefolder
 
 # We wait till the DNS record is available
 masterIP=`getent hosts firstmaster.elasticsearch | awk '{ print $1 }'`
-while [ -z $masterIP ]
+while [ -z $masterIP ] || [ $masterIP = '0.0.0.0' ];
 do
   echo "DNS record isn't set for the master node. No ElasticSearch cluster can be formed. Trying again in a min."
   masterIP=`getent hosts firstmaster.elasticsearch | awk '{ print $1 }'`
