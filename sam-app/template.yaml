@@ -218,6 +218,11 @@ Resources:
           Description: 'Allow All http from Anywhere'
         - IpProtocol: tcp
           CidrIp: 0.0.0.0/0
+          FromPort: 9200
+          ToPort: 9200
+          Description: 'Allow All http on port 9200 from Anywhere'
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
           FromPort: 443
           ToPort: 443
           Description: 'Allow All https from Anywhere'
@@ -281,6 +286,25 @@ Resources:
       ResourceRecords:
         - !Sub "\"${ElasticsearchClusterName}\""
 
+  SingleMasterDNSDNSRecord:
+    DependsOn: ElasticsearchDNSzone
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Join 
+        - ''
+        - - !Ref HostedZone
+          - .
+      Comment: DNS name for the first master node.
+      Name: !Join 
+        - ''
+        - - 'singlemaster'
+          - .
+          - !Ref HostedZone
+          - .
+      Type: A
+      TTL: '30'
+      ResourceRecords:
+        - !Ref InitialResourceRecord
 
 
 # ================================
@@ -691,7 +715,7 @@ Resources:
                 commands:
                   - echo $REPOSITORY
                   - echo $REPOSITORY_URI
-                  - $(aws ecr get-login --region ${AWS::Region} --no-in ude-email)
+                  - $(aws ecr get-login --region ${AWS::Region} --no-include-email)
               build:
                 commands:
                   - pwd
