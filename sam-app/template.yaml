@@ -630,13 +630,16 @@ Resources:
                 commands:
                   - echo $REPOSITORY
                   - echo $REPOSITORY_URI
+                  - echo $AWS_DEFAULT_REGION
               build:
                 commands:
                   - cd ami
+                  - sed "s/AWS_DEFAULT_REGION/$AWS_DEFAULT_REGION/g" -i awscli.conf
                   - packer build packer-template.json
               post_build:
                 commands:
                   - ls -al
+                  - cat awscli.conf
 
 
 

@@ -14,6 +14,16 @@
       "script": "setup_ssm_and_clw.sh"
     },
     {
+      "type": "file",
+      "source": "awscli.conf",
+      "destination": "/etc/awslogs/awscli.conf"
+    },
+    {
+      "type": "file",
+      "source": "awslogs.conf",
+      "destination": "/etc/awslogs/awslogs.conf"
+    },
+    {
       "type": "shell",
       "script": "setup_elasticsearch.sh"
     },

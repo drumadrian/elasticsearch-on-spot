@@ -2,11 +2,10 @@ version = 0.1
 [default]
 [default.deploy]
 [default.deploy.parameters]
-stack_name = "elasticsearch-on-spot"
-s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1e74394h1ysht"
-s3_prefix = "sam-app"
+stack_name = "Elasticsearch-On-Spot"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-9uezuy1wn7v6"
+s3_prefix = "Elasticsearch-On-Spot"
 region = "us-west-2"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 parameter_overrides = "VpcCidrBlock=\"192.168.0.0/16\" SubnetACidrBlock=\"192.168.0.0/20\" SubnetBCidrBlock=\"192.168.16.0/20\" SubnetCCidrBlock=\"192.168.32.0/20\" EgressCidr=\"0.0.0.0/0\" ElasticsearchClusterName=\"elasticsearchonspot\" HostedZone=\"elasticsearch\" InitialResourceRecord=\"0.0.0.0\""
-
