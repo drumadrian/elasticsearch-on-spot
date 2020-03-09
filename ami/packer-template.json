@@ -11,6 +11,10 @@
   "provisioners": [
     {
       "type": "shell",
+      "script": "setup_ssm_and_clw.sh"
+    },
+    {
+      "type": "shell",
       "script": "setup_elasticsearch.sh"
     },
     {
