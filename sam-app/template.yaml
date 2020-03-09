@@ -94,6 +94,9 @@ Resources:
         -
           Key: SolutionId
           Value: SO0062
+        -
+          Key: Name
+          Value: !Sub "${AWS::StackName}-VPC"
 
   PublicSubnetA:
     Type: AWS::EC2::Subnet
