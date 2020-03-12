@@ -16,5 +16,5 @@ sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/late
 sudo systemctl start amazon-ssm-agent
 sudo systemctl enable amazon-ssm-agent
 sudo systemctl status amazon-ssm-agent
-
-
+sudo chmod -R 777 /etc/awslogs/
+sudo chown -R ec2-user:ec2-user /etc/awslogs
