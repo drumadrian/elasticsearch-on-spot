@@ -58,7 +58,7 @@ Parameters:
 
   ElasticsearchClusterName:
     Type: String
-    Default: "elasticsearchonspot"
+    Default: "spot-es"
     Description: The name of the elasticsearch cluster
     MinLength: 1
     MaxLength: 25
@@ -66,7 +66,7 @@ Parameters:
 
   HostedZone:
     Type: String
-    Default: "elasticsearch"
+    Default: "elasticsearch.com"
     Description: The DNS name of the Amazon Route 53 hosted zone
     AllowedPattern: '(?!-)[a-zA-Z0-9-.]{1,63}(?<!-)'
     ConstraintDescription: must be a valid DNS zone name.
@@ -429,7 +429,7 @@ Resources:
           - Effect: Allow
             Action: sts:AssumeRole
             Principal:
-              Service: codebuild.amazonaws.com
+              Service: ec2.amazonaws.com
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
       Policies:

@@ -45,7 +45,13 @@ type=rpm-md
 EOF
 sudo mv kibana.repo /etc/yum.repos.d/
 sudo yum install -y kibana
+mkdir -p /var/log/kibana/ 
+touch /var/log/kibana/kibana.log
+chown kibana:kibana /var/log/kibana/kibana.log
+chmod 777 /var/log/kibana/kibana.log
 
 # Install Metricbeat
 curl -L -O https://artifacts.elastic.co/downloads/beats/metricbeat/metricbeat-7.6.0-x86_64.rpm
 sudo rpm -vi metricbeat-7.6.0-x86_64.rpm
+
+

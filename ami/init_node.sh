@@ -14,11 +14,11 @@ ls -al /
 sudo chown elasticsearch:elasticsearch /nvmedrivefolder
 
 # We wait till the DNS record is available
-masterIP=`getent hosts firstmaster.elasticsearch | awk '{ print $1 }'`
+masterIP=`getent hosts firstmaster.elasticsearch.com | awk '{ print $1 }'`
 while [ -z $masterIP ] || [ $masterIP = '0.0.0.0' ];
 do
   echo "DNS record isn't set for the master node. No ElasticSearch cluster can be formed. Trying again in a min."
-  masterIP=`getent hosts firstmaster.elasticsearch | awk '{ print $1 }'`
+  masterIP=`getent hosts firstmaster.elasticsearch.com | awk '{ print $1 }'`
   sleep 60
 done
 
@@ -44,6 +44,8 @@ sudo systemctl start elasticsearch.service
 sudo cp /etc/kibana/kibana.yml.bak /etc/kibana/kibana.yml
 echo "server.host: `curl http://169.254.169.254/latest/meta-data/public-hostname`" | sudo tee -a /etc/kibana/kibana.yml
 echo "elasticsearch.hosts: [\"http://$masterIP:9200\"]" | sudo tee -a /etc/kibana/kibana.yml
+echo "logging.dest: /var/log/kibana/kibana.log" | sudo tee -a /etc/kibana/kibana.yml
+
 
 # Start Kibana Service
 if [[ $nodeRole == *"master"* ]] || [[ $nodeRole == *"Master"* ]]; then

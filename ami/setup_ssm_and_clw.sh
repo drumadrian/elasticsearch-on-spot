@@ -3,10 +3,8 @@ sudo yum update -y
 # https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/QuickStartEC2Instance.html
 sudo yum install -y awslogs
 sudo service awslogsd start
-
-# sudo systemctl enable awslogsd
-# sudo systemctl start awslogsd
 sudo systemctl enable awslogsd.service
+sudo service awslogsd start
 
 # Edit file /etc/awslogs/awscli.conf and change your AWS Region.
 # Edit file /etc/awslogs/awslogs.conf and verify following lines
