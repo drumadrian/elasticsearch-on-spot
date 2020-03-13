@@ -24,7 +24,6 @@ done
 
 # We add the master node's IP to the config file
 sudo cp /etc/elasticsearch/elasticsearch.yml.bak /etc/elasticsearch/elasticsearch.yml
-echo -e "\n" | sudo tee -a /etc/elasticsearch.elasticsearch.yml # ignore the commented out line
 echo "cluster.initial_master_nodes: [\"$masterIP\"]" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
 
 nodeRole=`curl http://169.254.169.254/latest/meta-data/security-groups`
