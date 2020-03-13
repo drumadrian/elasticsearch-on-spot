@@ -4,7 +4,7 @@ sudo yum update -y
 sudo yum install -y awslogs
 sudo service awslogsd start
 sudo systemctl enable awslogsd.service
-sudo service awslogsd start
+sudo service awslogsd status
 
 # Edit file /etc/awslogs/awscli.conf and change your AWS Region.
 # Edit file /etc/awslogs/awslogs.conf and verify following lines

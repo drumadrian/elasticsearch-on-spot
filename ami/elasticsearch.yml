@@ -68,7 +68,7 @@ network.host: [_site_, _local_]
 # The default list of hosts is ["127.0.0.1", "[::1]"]
 # Seed host node(s) based on the DNS
 discovery.seed_hosts:
-    - firstmaster.elasticsearch
+    - firstmaster.elasticsearch.com
 #discovery.seed_hosts: ["host1", "host2"]
 #
 # Bootstrap the cluster using an initial set of master-eligible nodes:
