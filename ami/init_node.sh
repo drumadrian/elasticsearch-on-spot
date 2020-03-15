@@ -32,7 +32,7 @@ if [[ $nodeRole == *"master"* ]] || [[ $nodeRole == *"Master"* ]]; then
   echo "node.master: true" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
   echo "node.data: true" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
 elif [[ $nodeRole == *"data"* ]] || [[ $nodeRole == *"Data"* ]]; then
-  echo "node.master: false" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
+  echo "node.master: true" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
   echo "node.data: true" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
 fi
 
