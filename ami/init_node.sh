@@ -30,7 +30,7 @@ nodeRole=`curl http://169.254.169.254/latest/meta-data/security-groups`
 
 if [[ $nodeRole == *"master"* ]] || [[ $nodeRole == *"Master"* ]]; then
   echo "node.master: true" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
-  echo "node.data: false" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
+  echo "node.data: true" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
 elif [[ $nodeRole == *"data"* ]] || [[ $nodeRole == *"Data"* ]]; then
   echo "node.master: false" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
   echo "node.data: true" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
